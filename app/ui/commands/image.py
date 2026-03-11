@@ -149,3 +149,34 @@ class ToggleSkipImagesCommand(QUndoCommand):
     def undo(self):
         for file_path in self.file_paths:
             self._apply_status(file_path, self.old_status.get(file_path, False))
+
+class MirrorImageCommand(QUndoCommand):
+    def __init__(self, main):
+        super().__init__()
+        self.ct = main
+
+    def _mirror(self):
+        if self.ct.curr_img_idx < 0:
+            return
+        file_path = self.ct.image_files[self.ct.curr_img_idx]
+        img = self.ct.image_ctrl.load_image(file_path)
+        if img is None:
+            return
+
+        # Flip the image horizontally
+        mirrored = np.fliplr(img).copy()
+
+        # Mirror all text block bounding boxes to match
+        if hasattr(self.ct, 'blk_list') and self.ct.blk_list:
+            w = img.shape[1]
+            for blk in self.ct.blk_list:
+                x1, y1, x2, y2 = blk.xyxy
+                blk.xyxy = [w - x2, y1, w - x1, y2]
+
+        self.ct.image_ctrl.set_image(mirrored)
+
+    def redo(self):
+        self._mirror()
+
+    def undo(self):
+        self._mirror()  # Mirroring is its own inverse
