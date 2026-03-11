@@ -163,16 +163,29 @@ class MirrorImageCommand(QUndoCommand):
         if img is None:
             return
 
-        # Flip the image horizontally
+        img_w = img.shape[1]
+
+        # 1. Flip the image horizontally
         mirrored = np.fliplr(img).copy()
 
-        # Mirror all text block bounding boxes to match
+        # 2. Mirror all text block bounding boxes in blk_list
         if hasattr(self.ct, 'blk_list') and self.ct.blk_list:
-            w = img.shape[1]
             for blk in self.ct.blk_list:
                 x1, y1, x2, y2 = blk.xyxy
-                blk.xyxy = [w - x2, y1, w - x1, y2]
+                blk.xyxy = [img_w - x2, y1, img_w - x1, y2]
 
+        # 3. Mirror all canvas overlay items (text boxes, rectangles)
+        from PySide6.QtWidgets import QGraphicsPixmapItem
+        scene = self.ct.image_viewer._scene
+        for item in scene.items():
+            if isinstance(item, QGraphicsPixmapItem):
+                continue  # skip the background image itself
+            item_w = item.boundingRect().width()
+            old_x = item.pos().x()
+            old_y = item.pos().y()
+            item.setPos(img_w - old_x - item_w, old_y)
+
+        # 4. Set the flipped image
         self.ct.image_ctrl.set_image(mirrored)
 
     def redo(self):
