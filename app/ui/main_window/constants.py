@@ -15,6 +15,7 @@ supported_source_languages = [
     "German",
     "Dutch",
     "Spanish",
+    "Hebrew",
     "Italian",
 ]
 
@@ -28,6 +29,7 @@ supported_target_languages = [
     "Russian",
     "German",
     "Dutch",
+    "Hebrew",
     "Spanish",
     "Italian",
     "Turkish",
