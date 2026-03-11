@@ -154,58 +154,44 @@ class MirrorImageCommand(QUndoCommand):
     def __init__(self, main):
         super().__init__()
         self.ct = main
+        self.prev_image = None  # for undo
 
-    def _mirror(self):
+    def redo(self):
         if self.ct.curr_img_idx < 0:
             return
+
         file_path = self.ct.image_files[self.ct.curr_img_idx]
-        img = self.ct.image_ctrl.load_image(file_path)
-        if img is None:
+
+        # 1. Composite ALL layers (base image + text boxes + patches) into one flat image
+        composited = self.ct.image_viewer.get_image_array(paint_all=True)
+        if composited is None:
             return
 
-        img_w = img.shape[1]
+        # 2. Save it so undo can restore it
+        self.prev_image = composited.copy()
 
-        # 1. Save canvas state BEFORE clearing
-        state = self.ct.image_viewer.save_state()
+        # 3. Flip the flat composite horizontally
+        mirrored = np.fliplr(composited).copy()
 
-        # 2. Mirror rectangle positions in saved state
-        mirrored_rects = []
-        for r in state['rectangles']:
-            x, y, w, h = r['rect']
-            mirrored_rects.append({**r, 'rect': (img_w - x - w, y, w, h)})
-        state['rectangles'] = mirrored_rects
-
-        # 3. Mirror text item positions in saved state
-        mirrored_texts = []
-        for t in state.get('text_items_state', []):
-            t2 = dict(t)
-            pos = t.get('position', (0, 0))
-            item_width = t.get('width') or 0
-            t2['position'] = (img_w - pos[0] - item_width, pos[1])
-            mirrored_texts.append(t2)
-        state['text_items_state'] = mirrored_texts
-
-        # 4. Flip the image pixels
-        mirrored = np.fliplr(img).copy()
-
-        # 5. Update image data directly (don't use set_image — it would push
-        #    another command onto the undo stack and call clear_scene again)
-        self.ct.image_data[file_path] = mirrored
-
-        # 6. Display the flipped image (this calls clear_scene internally)
-        self.ct.image_viewer.display_image_array(mirrored, fit=False)
-
-        # 7. Restore all canvas items at their mirrored positions
-        self.ct.image_viewer.load_state(state)
-
-        # 8. Mirror blk_list bounding boxes
+        # 4. Mirror blk_list bounding boxes so future pipeline steps stay aligned
+        img_w = composited.shape[1]
         if hasattr(self.ct, 'blk_list') and self.ct.blk_list:
             for blk in self.ct.blk_list:
                 x1, y1, x2, y2 = blk.xyxy
                 blk.xyxy = [img_w - x2, y1, img_w - x1, y2]
 
-    def redo(self):
-        self._mirror()
+        # 5. Set the mirrored image (clears canvas overlays automatically — they're already baked in)
+        self.ct.image_ctrl.set_image(mirrored)
 
     def undo(self):
-        self._mirror()  # Mirroring is its own inverse
+        if self.prev_image is None or self.ct.curr_img_idx < 0:
+            return
+
+        # Restore the pre-mirror image
+        img_w = self.prev_image.shape[1]
+        if hasattr(self.ct, 'blk_list') and self.ct.blk_list:
+            for blk in self.ct.blk_list:
+                x1, y1, x2, y2 = blk.xyxy
+                blk.xyxy = [img_w - x2, y1, img_w - x1, y2]
+
+        self.ct.image_ctrl.set_image(self.prev_image.copy())
