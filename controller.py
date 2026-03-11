@@ -197,6 +197,7 @@ class ComicTranslate(ComicTranslateUI):
         self.cancel_button.clicked.connect(self.cancel_current_task)
         self.batch_report_button.clicked.connect(self.show_latest_batch_report)
         self.set_all_button.clicked.connect(self.text_ctrl.set_src_trg_all)
+        self.mirror_button.clicked.connect(self.image_ctrl.mirror_page)
         self.clear_rectangles_button.clicked.connect(self.image_viewer.clear_rectangles)
         self.clear_brush_strokes_button.clicked.connect(self.image_viewer.clear_brush_strokes)
         self.draw_blklist_blks.clicked.connect(lambda: self.pipeline.load_box_coords(self.blk_list))
