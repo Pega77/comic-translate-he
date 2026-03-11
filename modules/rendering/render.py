@@ -13,7 +13,6 @@ from modules.utils.textblock import adjust_blks_size
 from modules.detection.utils.geometry import shrink_bbox
 from app.ui.canvas.text.vertical_layout import VerticalTextDocumentLayout
 from modules.utils.language_utils import get_language_code
-from bidi.algorithm import get_display
 
 from dataclasses import dataclass
 
@@ -62,14 +61,6 @@ def is_vertical_block(blk, lang_code: str | None) -> bool:
     and the target language code is one of the vertical-capable ones.
     """
     return getattr(blk, "direction", "") == "vertical" and is_vertical_language_code(lang_code)
-
-def prepare_rtl_text(text: str, language: str) -> str:
-    """Reorder characters for RTL languages (Hebrew, Arabic, Persian) before PIL rendering."""
-    from modules.utils.language_utils import get_layout_direction
-    from PySide6.QtCore import Qt
-    if get_layout_direction(language) == Qt.LayoutDirection.RightToLeft:
-        return get_display(text)
-    return text
 
 def pil_word_wrap(image: Image, tbbox_top_left: Tuple, font_pth: str, text: str, 
                   roi_width, roi_height, align: str, spacing, init_font_size: int, min_font_size: int = 10):
