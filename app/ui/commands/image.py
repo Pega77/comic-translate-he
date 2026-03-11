@@ -154,7 +154,8 @@ class MirrorImageCommand(QUndoCommand):
     def __init__(self, main):
         super().__init__()
         self.ct = main
-        self.prev_image = None  # for undo
+        self.prev_image = None
+        self.prev_patches = None  # save patches for undo
 
     def redo(self):
         if self.ct.curr_img_idx < 0:
@@ -162,32 +163,44 @@ class MirrorImageCommand(QUndoCommand):
 
         file_path = self.ct.image_files[self.ct.curr_img_idx]
 
-        # 1. Composite ALL layers (base image + text boxes + patches) into one flat image
+        # 1. Composite ALL layers (base image + inpainted patches + text) into one flat image
         composited = self.ct.image_viewer.get_image_array(paint_all=True)
         if composited is None:
             return
 
-        # 2. Save it so undo can restore it
+        # 2. Save for undo
         self.prev_image = composited.copy()
+        self.prev_patches = list(self.ct.image_patches.get(file_path, []))
 
-        # 3. Flip the flat composite horizontally
+        # 3. Clear stored patches — they are now baked into the flat image
+        #    If we don't do this, load_patch_state() redraws them at original positions
+        self.ct.image_patches[file_path] = []
+        self.ct.in_memory_patches[file_path] = []
+
+        # 4. Flip the flat composite horizontally
         mirrored = np.fliplr(composited).copy()
 
-        # 4. Mirror blk_list bounding boxes so future pipeline steps stay aligned
+        # 5. Mirror blk_list bounding boxes
         img_w = composited.shape[1]
         if hasattr(self.ct, 'blk_list') and self.ct.blk_list:
             for blk in self.ct.blk_list:
                 x1, y1, x2, y2 = blk.xyxy
                 blk.xyxy = [img_w - x2, y1, img_w - x1, y2]
 
-        # 5. Set the mirrored image (clears canvas overlays automatically — they're already baked in)
+        # 6. Set the clean flipped image (no patches will be redrawn)
         self.ct.image_ctrl.set_image(mirrored)
 
     def undo(self):
         if self.prev_image is None or self.ct.curr_img_idx < 0:
             return
 
-        # Restore the pre-mirror image
+        file_path = self.ct.image_files[self.ct.curr_img_idx]
+
+        # Restore original patches
+        self.ct.image_patches[file_path] = self.prev_patches or []
+        self.ct.in_memory_patches[file_path] = []
+
+        # Un-flip blk_list
         img_w = self.prev_image.shape[1]
         if hasattr(self.ct, 'blk_list') and self.ct.blk_list:
             for blk in self.ct.blk_list:
