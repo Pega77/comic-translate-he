@@ -400,7 +400,4 @@ def manual_wrap(
         )
         
         main_page.blk_rendered.emit(translation, font_size, blk, image_path)
-
-
-python-bidi>=0.4.2
         
