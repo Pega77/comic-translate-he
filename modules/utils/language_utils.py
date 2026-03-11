@@ -23,6 +23,7 @@ language_codes = {
     "Hungarian": "hu",
     "Finnish": "fi",
     "Arabic": "ar",
+    "Hebrew": "he",
     "Czech": "cs",
     "Persian": "fa",
     "Romanian": "ro",
