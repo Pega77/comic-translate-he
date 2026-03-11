@@ -266,12 +266,16 @@ class WorkspaceMixin:
         self.pan_button.clicked.connect(self.toggle_pan_tool)
         self.tool_buttons["pan"] = self.pan_button
 
+        self.mirror_button = self.create_tool_button(svg="arrow-left.svg", checkable=False)
+        self.mirror_button.setToolTip(self.tr("Mirror Page (flip horizontally for RTL)"))
+
         self.set_all_button = MPushButton(self.tr("Set for all"))
         self.set_all_button.setToolTip(
             self.tr("Sets the Source and Target Language on the current page for all pages")
         )
 
         misc_lay.addWidget(self.pan_button)
+        misc_lay.addWidget(self.mirror_button)
         misc_lay.addWidget(self.set_all_button)
         misc_lay.addStretch()
 
