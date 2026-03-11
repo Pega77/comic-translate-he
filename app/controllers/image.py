@@ -858,6 +858,16 @@ class ImageStateController:
 
                 self.main.in_memory_patches.pop(oldest_image, None)
 
+    def mirror_page(self):
+        from app.ui.commands.image import MirrorImageCommand
+        if self.main.curr_img_idx < 0:
+            return
+        file_path = self.main.image_files[self.main.curr_img_idx]
+        if file_path not in self.main.undo_stacks:
+            return
+        command = MirrorImageCommand(self.main)
+        self.main.undo_stacks[file_path].push(command)
+    
     def set_image(self, rgb_img: np.ndarray, push: bool = True):
         if self.main.curr_img_idx >= 0:
             file_path = self.main.image_files[self.main.curr_img_idx]
